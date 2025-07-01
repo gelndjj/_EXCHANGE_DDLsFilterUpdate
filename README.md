@@ -29,3 +29,43 @@ A PowerShell utility designed for IT administrators to **manage Dynamic Distribu
   ```powershell
   Install-Module ExchangeOnlineManagement -Scope CurrentUser
   ```
+---
+
+## 🚀 How to Use
+
+Launch the script:
+```powershell
+.\DynamicDL_Updater.ps1
+```
+
+Select an option from the menu:
+Option	Description
+0	Generate DDL Filter Report (creates a base CSV to edit)
+1	Upload and Apply Recipient Filters from CSV
+2	Dry Run – Preview DDL members per filter
+3	Exit the tool
+
+---
+
+## 📢 Use Option 0 first to generate the template, then modify and reuse that same CSV for Options 1 and 2.
+🧪 Example Filter
+
+```txt
+(Company -eq "Contoso") -and (RecipientTypeDetails -eq "UserMailbox") -and (ExchangeUserAccountControl -ne 'AccountDisabled')
+```
+You can copy filters from existing DDLs and adapt them as needed.
+
+---
+
+## 🛠 Tech Stack
+
+1. PowerShell
+2. Exchange Online Management Module
+3. Windows Forms File Dialog
+
+---
+
+## 🤝 Contributions
+
+Feel free to fork, improve, and submit pull requests if you'd like to contribute!
+
