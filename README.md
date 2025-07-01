@@ -38,12 +38,17 @@ Launch the script:
 .\DynamicDL_Updater.ps1
 ```
 
-Select an option from the menu:
-Option	Description
-0	Generate DDL Filter Report (creates a base CSV to edit)
-1	Upload and Apply Recipient Filters from CSV
-2	Dry Run – Preview DDL members per filter
-3	Exit the tool
+### 📋 Options Menu
+
+| Option | Description                                               |
+|--------|-----------------------------------------------------------|
+|   0    | Generate DDL Filter Report (creates a base CSV to edit)   |
+|   1    | Upload and Apply Recipient Filters from CSV               |
+|   2    | Dry Run – Preview DDL members per filter                  |
+|   3    | Exit the tool                                             |
+
+
+![Terminal Example](screenshots/2025-07-01_13-4807⁄01⁄25.png)
 
 ---
 
