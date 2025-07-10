@@ -70,6 +70,25 @@ You can copy filters from existing DDLs and adapt them as needed.
 
 ---
 
+## 🔧 Configuration Runbook (Automation Account)
+
+```pwsh
+Runbook_Template-DDL_Report.ps1
+```
+Before using this script:
+
+1. Replace `<YourTenant>.onmicrosoft.com` with your actual tenant domain.
+2. Replace the SharePoint URL:
+   - `https://<YourSharePointSite>.sharepoint.com/sites/<YourSiteName>`
+3. Ensure your Azure Automation Account has these modules:
+   - `ExchangeOnlineManagement`
+   - `PnP.PowerShell`
+4. Assign the following roles to the Managed Identity:
+   - **Exchange Administrator**
+   - **Contributor** on the SharePoint site
+
+---
+
 ## 🤝 Contributions
 
 Feel free to fork, improve, and submit pull requests if you'd like to contribute!
