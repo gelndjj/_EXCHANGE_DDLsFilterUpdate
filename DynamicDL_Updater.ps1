@@ -71,11 +71,29 @@ function Generate-DDLReport {
         }
     }
 
-    $report | Export-Csv -Path $outputPath -NoTypeInformation -Encoding UTF8
+    $report | Export-Csv -Path $outputPath -NoTypeInformation -Encoding UTF8 -Delimiter ';'
     Write-Host "✔ Report saved to: $outputPath" -ForegroundColor Green
 
     Disconnect-ExchangeOnline -Confirm:$false
     Pause
+}
+
+function Get-ParsedCsvData {
+    param([string]$Path)
+
+    # Try semicolon first (for French Excel)
+    try {
+        $data = Import-Csv -Path $Path -Encoding UTF8 -Delimiter ';'
+        if ($data[0].PSObject.Properties.Name -contains "Email Address") { return $data }
+    } catch {}
+
+    # Fallback to comma
+    try {
+        $data = Import-Csv -Path $Path -Encoding UTF8 -Delimiter ','
+        return $data
+    } catch {
+        throw "❌ Could not parse CSV. Ensure it's formatted correctly."
+    }
 }
 
 function Upload-And-ApplyFilters {
@@ -87,25 +105,35 @@ function Upload-And-ApplyFilters {
     if ($fileDialog.ShowDialog() -eq "OK") {
         $CSVPath = $fileDialog.FileName
         Connect-ExchangeOnline -ShowProgress $true
-        $updates = Import-Csv -Path $CSVPath
+
+        $updates = Get-ParsedCsvData -Path $CSVPath
 
         foreach ($entry in $updates) {
-            $name = $entry.'Display Name'
+            $email = $entry.'Email Address'
+            if (-not $email) { $email = $entry.'"Email Address"' }
+            if (-not $email) {
+                Write-Warning "Skipping row with missing Email Address"
+                continue
+            }
+
             $filter = $entry.'Raw Filter'
+            if ($filter.Length -gt 2048) {
+                Write-Warning "⚠ Filter too long for $email — skipping! (Length: $($filter.Length))"
+                continue
+            }
 
-            Write-Host "Updating DDL: $name" -ForegroundColor Cyan
-
+            Write-Host "Updating DDL: $email" -ForegroundColor Cyan
             try {
-                Set-DynamicDistributionGroup -Identity $name -RecipientFilter $filter
-                Write-Host "✔ Successfully updated: $name" -ForegroundColor Green
+                Set-DynamicDistributionGroup -Identity $email -RecipientFilter $filter
+                Write-Host "✔ Successfully updated: $email" -ForegroundColor Green
             } catch {
-                Write-Warning "Failed to update $name $_"
+                Write-Warning "Failed to update $email $_"
             }
         }
 
         Disconnect-ExchangeOnline -Confirm:$false
     } else {
-        Write-Warning "⚠ No file selected. Operation cancelled."
+        Write-Warning "No file selected. Operation cancelled."
     }
     Pause
 }
@@ -120,30 +148,35 @@ function Upload-And-DryRunFilters {
         $CSVPath = $fileDialog.FileName
         Connect-ExchangeOnline -ShowProgress $true
 
-        $updates = Import-Csv -Path $CSVPath
+        $updates = Get-ParsedCsvData -Path $CSVPath
         $outputFolder = ".\\DryRun_Results"
         if (!(Test-Path $outputFolder)) { New-Item -ItemType Directory -Path $outputFolder | Out-Null }
 
         foreach ($entry in $updates) {
-            $name = $entry.'Display Name'
+            $email = $entry.'Email Address'
+            if (-not $email) { $email = $entry.'"Email Address"' }
+            if (-not $email) {
+                Write-Warning "Skipping row with missing Email Address"
+                continue
+            }
+
             $filter = $entry.'Raw Filter'
 
-            Write-Host "🔍 Simulating filter for: $name" -ForegroundColor Cyan
-
+            Write-Host "🔍 Simulating filter for: $email" -ForegroundColor Cyan
             try {
                 $recipients = Get-Recipient -RecipientPreviewFilter $filter | Select-Object DisplayName,
                     @{Name="UserPrincipalName"; Expression={ if ($_.UserPrincipalName) { $_.UserPrincipalName } else { $_.PrimarySmtpAddress } }}
 
-                $outputPath = Join-Path $outputFolder "$($name -replace '[^a-zA-Z0-9_-]', '_').csv"
+                $outputPath = Join-Path $outputFolder "$($email -replace '[^a-zA-Z0-9_-]', '_').csv"
 
                 if ($recipients.Count -eq 0) {
-                    Write-Warning "⚠ No matching recipients for $name"
+                    Write-Warning "No matching recipients for $email"
                 } else {
                     $recipients | Export-Csv -Path $outputPath -NoTypeInformation -Encoding UTF8
-                    Write-Host "✔ Results saved to: $outputPath" -ForegroundColor Green
+                    Write-Host "Results saved to: $outputPath" -ForegroundColor Green
                 }
             } catch {
-                Write-Warning "Simulation failed for $name $_"
+                Write-Warning "Simulation failed for $email $_"
             }
         }
 
@@ -164,6 +197,6 @@ do {
         "1" { Upload-And-ApplyFilters }
         "2" { Upload-And-DryRunFilters }
         "3" { Write-Host "Exiting...`n" -ForegroundColor Yellow }
-        default { Write-Warning "⚠ Invalid choice. Please select 0 to 3." ; Pause }
+        default { Write-Warning "Invalid choice. Please select 0 to 3." ; Pause }
     }
 } while ($choice -ne "3")
